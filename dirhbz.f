@@ -9380,8 +9380,8 @@ C
  40      continue          
          if (p.gt.tol) goto 70
          write (6,200) ('-',j=1,80),tol,i,k,a(i,k),('-',j=1,80)
-  200    format (/1x,80a1/' *****  ERROR IN LINGD , TOLERANZ =',e10.4,
-     1 ' VALUE OF A(',i3,',',i3,') IS ',e10.4/1x,80a1)
+  200    format (/1x,80a1/' *****  ERROR IN LINGD , TOLERANZ =',e11.4,
+     1 ' VALUE OF A(',i3,',',i3,') IS ',e11.4/1x,80a1)
          ifl=-1                                         
          return
    70    cp=one/a(i,k)
@@ -12121,8 +12121,8 @@ c
 c     main iteration for the spherical Dirac program
 c
 c----------------------------------------------------------------------c
+      use mpi
       implicit real*8 (a-h,o-z)
-      include 'mpif.h'
 c
       logical lpr,lprx
       character*2 nucnam
@@ -12290,14 +12290,30 @@ c
 c     parallel version for determining minima on PES
 c
 c----------------------------------------------------------------------c
-c
+c     The (initial) betac parameters are sampled with finer
+c     discretization when more MPI ranks (cores) are used.
+c     This should be revised in the future.
 c-------------------------------------
+      program dirhb_axial
+      use mpi
       implicit real*8 (a-h,o-z)
+c      implicit none
 
 c-------------------------------------
-      include 'mpif.h'
+c      include 'mpif.h'
+c       use mpi
 c-------------------------------------
-
+c
+        integer :: ierr, i_my_id, i_num_procs
+        integer :: i, j, i_min_rank, nfields
+        integer :: i_min, icount
+c       16 is maximum number of stored data
+        integer, parameter :: per_proc = 15
+        real(kind=8) :: tmp_array(per_proc)
+        real(kind=8), allocatable :: results_array(:)
+        real(kind=8) :: starts, ends, F_min, F_tmp
+        integer :: root
+c
       common /mathco/ zero,one,two,half,third,pi
       common /betbet/ bet2(3),bet4(3)
       common /con_b2/ betac,q0c,cquad,c0,alaq,calcq0,icstr
@@ -12311,26 +12327,34 @@ c-------------------------------------
       common /iterat/ si,siold,epsi,xmix,xmix0,xmax,maxi,ii,inxt,iaut
       common /nucnuc/ amas,nneu,npro,nmas,nucnam
       common /baspar/ hom,hb0,b0
-c---- array to store calculated values
-c---- 11 is nproc and 16 is maximum number of stored data
-      dimension results_array(15*11)
-      dimension tmp_array(15)
+
+
       logical drip_line
       common /dripline/ sn(500),sp(500)
       common /direc/ i_direc
+
+
+c     data zero /0.0d0/
+      root = 0
 
 c-------------------------------------
 c-------------------------------------
 c    start parallel region here !
 c-------------------------------------
       call MPI_INIT ( ierr )
-c-------------------------------------
       call MPI_COMM_RANK (MPI_COMM_WORLD, i_my_id, ierr)
       call MPI_COMM_SIZE (MPI_COMM_WORLD, i_num_procs, ierr)
 
-      write(*,*) 'Starting process, ', i_my_id
+      nfields = per_proc
+      allocate(results_array(nfields *i_num_procs))
 
-      open(99,file='results.out',status='unknown')
+      write(*,*) 'Starting process, ', i_my_id
+      if (i_my_id == root) then
+      open(99, file='results.out', status='replace',
+     &         action='write', iostat=ierr)
+        if (ierr /= 0)
+     &  write(*,*) 'Error opening results.out on root, iostat=', ierr
+      endif
 c      open(55,file='results_drip_line.out',status = 'unknown')
 c
 c
@@ -12423,55 +12447,52 @@ c-------------------------------------
       tmp_array(14) = part_dens
       tmp_array(15) = time_life
 c----- collect tmp_array    
-      call MPI_GATHER(tmp_array,15,MPI_REAL8,
-     $   results_array,15,MPI_REAL8,0,
+      call MPI_GATHER(tmp_array,nfields,MPI_DOUBLE_PRECISION,
+     $   results_array,nfields,MPI_DOUBLE_PRECISION,root,
      $   MPI_COMM_WORLD, ierr )
 
 c---- write array to results.out
-      if (i_my_id.eq.0) then
-      do i = 1,11
-      write(99,'(15E16.8)') 
-     $ (results_array(j),j=(i-1)*15+1,i*15)
-c      write(*,'(15E16.8)') 
-c     $ (results_array(j),j=(i-1)*15+1,i*15)  
-      enddo !i
-      endif
+      if (i_my_id.eq.root) then
+      do i = 0,i_num_procs-1
+        j = i*nfields + 1
+        write(99,'(15E16.8)') (results_array(j+k), k=0,nfields-1)
+      enddo
 
 c----- determine minimum F
-      i_min = 0
-      if (i_my_id.eq.0) then
-            F_min = 5000.d0
-            i_min = 1
-            do i = 1,11
-            if (results_array((i-1)*15+13).lt.maxi.and.
-     $       abs(results_array((i-1)*15+6)).lt.0.8) then
-             F_tmp = results_array((i-1)*15+4)
-     $        -temp*results_array((i-1)*15+5)
-             if ((F_tmp.lt.F_min)
-     $ .and.(results_array((i-1)*15+13).lt.300)) then
-                  F_min = F_tmp
-                  i_min = i
-             endif
-            endif ! ii condition
-            enddo
-       write(*,*) i_min, F_min,
-     $ results_array((i_min-1)*15+6),
-     $ results_array((i_min-1)*15+4),
-     $ results_array((i_min-1)*15+5)
-      endif
+      F_min = 1.0d30
+      i_min_rank = root
+      do i = 0, i_num_procs-1
+        if (results_array(i*nfields + 13) < maxi .and.
+     &     abs(results_array(i*nfields + 6)) < 0.8d0) then
+         F_tmp = results_array(i*nfields + 4)  ! E
+     &     - results_array(i*nfields + 3)      ! T
+     &     * results_array(i*nfields + 5)      ! S
+          if (F_tmp < F_min .and.
+     &      results_array(i*nfields + 13) < 300.0d0) then
+            F_min = F_tmp
+            i_min_rank = i
+          end if
+        end if
+      end do
+
+      write(*,*) 'Min found on rank ', i_min_rank, ' E-T.S=', F_min
+
+      end if
 
 c----- broadcast i_min
-      call MPI_BCAST(i_min,1,MPI_INTEGER,
-     $   0, MPI_COMM_WORLD, ierr )
+      call MPI_BCAST(i_min_rank,1,MPI_INTEGER,
+     &   root, MPI_COMM_WORLD, ierr )
 
-      write(*,*) 'Minmum is found on node, ', i_min, i_my_id, bet2(3)
+!      write(*,*) 'Value of bet2(3) for rank ',i_my_id, ": ", bet2(3) !for debug
+
 c----- plot the density for minimum configuation
-      if (i_my_id.eq.(i_min-1)) then
-            write(*,*) 'Plotting the density !'
-            call plot(.true.)
-      endif
+      if (i_my_id == i_min_rank) then
+        write(*,*) 'Plotting density on rank', i_my_id
+        call plot(.true.)
+      end if
 
-      close(99)
+      if (i_my_id == root) close(99)
+      deallocate(results_array)
 c---- RAVLIC, test modules for linear response
 
 c---- 
@@ -12481,9 +12502,7 @@ c-------------------------------------
       call MPI_FINALIZE ( ierr )
 c-------------------------------------
 
-      stop ' FINAL STOP OF DIRHBZ'
-c-end-DIZ
-      end
+      end program dirhb_axial
 
 c=====================================================================c
 
@@ -12888,10 +12907,10 @@ c======================================================================c
       subroutine reader(lpr)
 
 c======================================================================c
+      use mpi
       implicit real*8 (a-h,o-z)
 c
       include 'dirhb.par'
-      include 'mpif.h'
 c 
       logical lpr
       character parname*10                                      ! partyp
