@@ -1,0 +1,7 @@
+# Compiled Fortran files
+dirhbz.o
+dirhbz_vapor.o
+
+# Executable
+run
+
