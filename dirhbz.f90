@@ -12338,15 +12338,11 @@
         call emit_neutron()
       endif
 !-----------------------------------------
-
-
-
         end subroutine main_calls
-
-
-
-
-
+!
+!
+!
+!
 !======================================================================c
 !
       PROGRAM dirhb_axial
@@ -12358,20 +12354,12 @@
 !     parallel version for determining minima on PES
 !
 !----------------------------------------------------------------------c
-!     The (initial) betac parameters are sampled with finer
-!     discretization when more MPI ranks (cores) are used.
-!     This should be revised in the future.
-!-------------------------------------
+!
       use mpi
       use steps_module
       use globals_energy
       implicit real*8 (a-h,o-z)
 !      implicit none
-
-!-------------------------------------
-!      include 'mpif.h'
-!       use mpi
-!-------------------------------------
 !
         integer :: ierr, i_my_id, i_num_procs
         integer :: i, j, nfields
@@ -12387,7 +12375,6 @@
         integer :: min_l6
         character*3 :: min_char_l6
 !
-!      common /mathco/ zero,one,two,half,third,pi
       common /betbet/ bet2(3),bet4(3)
       common /con_b2/ betac,q0c,cquad,c0,alaq,calcq0,icstr
       common /temp/ temp
@@ -12415,21 +12402,19 @@
 !---- sets data
       call default(.false.)
 
-      n_beta = 7 ! Cantidad mínima de subdivisiones, por default. Luego se ajusta según nro de ranks
-
-
-
+!     Default minimum number of beta steps
+      n_beta = 32
 
       beta_initial = -0.6
       beta_final = +0.7
 
+!     Compute global step size
+      step = (beta_final - beta_initial) / real(n_beta - 1, kind=8)
 
       nfields = per_proc
 
 
         
-
-      
 !-------------------------------------
 !-------------------------------------
 !    start parallel region here !
@@ -12437,26 +12422,13 @@
       call MPI_INIT ( ierr )
       call MPI_COMM_RANK (MPI_COMM_WORLD, i_my_id, ierr)
       call MPI_COMM_SIZE (MPI_COMM_WORLD, i_num_procs, ierr)
-
-
-
-      
-
       write(*,*) 'Starting process, ', i_my_id
-
-
-
-
-
-!
-!
-
 !
       call cpu_time(starts)
 
 
-!!!!!!!!!!!! AGREGANDO COSAS ACA
-! Ajuste de n_beta según el número de procesos MPI
+!
+!     Adjust n_beta according to the number of MPI ranks
       if (i_num_procs > n_beta) then
        n_beta = i_num_procs
       else
@@ -12475,36 +12447,21 @@
 
       sendcount = nfields * steps_per_rank
       total_recvcount = sendcount * i_num_procs
-
       allocate(results_local(sendcount))
-
 
       if (i_my_id == root) then
         allocate(results_global(total_recvcount))
       else
-    ! non-root processes: allocate small dummies so variable exists
+!     Non-root processes: allocate small dummies so variable exists
           allocate(results_global(1))
       end if
 
 
 
-
-      
-
-      !     Compute global step size. Will depend on MPI size
-      step = (beta_final - beta_initial) / real(n_beta - 1, kind=8) !esta es una variable global, real
-
-
-! Compute global index corresponding to each process and step
-      !istep = 0 !LUEGO ESTO DEBERIA IR DENTRO DE UN BUCLE
-
       do istep = 0, (steps_per_rank - 1)
 
-      ! Asignar unidad lógica (evitando colisiones entre ranks)
+      ! Assign logical unit for output file
       l6 = 500 + i_my_id * steps_per_rank + istep
-
-!      write(*,'(A,I2,A,I3,A,I3)') 'DEBUG loop: Rank ', i_my_id, 
-!     & ' istep=', istep, ' iglobal=', iglobal
 
       iglobal = istep + i_my_id * (n_beta / i_num_procs)
 
@@ -12526,7 +12483,7 @@
 !-------------------------------------
 !    collect data
 !------------------------------------- 
-! collect local tmp_array (nfields elements)
+!     collect local tmp_array (nfields elements)
       tmp_array(1) = tz(1)
       tmp_array(2) = tz(2)
       tmp_array(3) = temp
@@ -12542,20 +12499,11 @@
       tmp_array(13) = ii
       tmp_array(14) = part_dens
       tmp_array(15) = time_life
-!----- collect tmp_array    
 
-
-
-
-
-        start_local = istep * nfields + 1
-        end_local   = start_local + nfields - 1
-        results_local(start_local:end_local) = tmp_array
-
-        
-
-
-
+!     Indexing to store in results_local
+      start_local = istep * nfields + 1
+      end_local   = start_local + nfields - 1
+      results_local(start_local:end_local) = tmp_array
 
     ! barrier to synchronization each step (capaz me conviene sacar esta barrera)
       call MPI_BARRIER(MPI_COMM_WORLD, ierr)
@@ -12563,11 +12511,10 @@
 
       end do  !istep
 
-       call MPI_GATHER(results_local, sendcount, MPI_DOUBLE_PRECISION, &
+
+      call MPI_GATHER(results_local, sendcount, MPI_DOUBLE_PRECISION, &
      &               results_global, sendcount, MPI_DOUBLE_PRECISION, &
      &               root, MPI_COMM_WORLD, ierr)
-
-
 
 
 !---- write array to results.out
@@ -12619,13 +12566,11 @@
 
 
 
-!! EN CONSTRUCCION...
-! NO ES LO MÁS ELEGANTE, PERO ES UNA BUENA SOLUCIÓN DE MOMENTO... 
-! SE VUELVE A CALCULAR LO QUE YA SE CALCULO, PERO SOLO PARA EL BETA CORRESPONDIENTE AL MINIMO
-! PARA NO TENER QUE REHACERLO, EN CADA RANK LOS RESULTADOS DEBERIAN ALMACENARSE EN DISTINTOS VECTORES
-! puedo agregar un logical. Que por DEFAULT esto no se haga, ni el llamado a plot.
-      rank_min = i_min / steps_per_rank  !CONSIDERANDO QUE ARRANCAMOS EN 0
-      local_step_min = mod(i_min, steps_per_rank) ! PASO LOCAL (ISTEP) DENTRO DEL RANK, ARRANCANDO EN 1
+! Here, we rerun the calculation for the minimum found
+! so that the plot can be performed afterwards
+! (this is a temporary solution)
+      rank_min = i_min / steps_per_rank
+      local_step_min = mod(i_min, steps_per_rank) ! step within rank
         if (i_my_id == rank_min) then
             betac = beta_initial + step * real(i_min, kind=8)
             write(*,*) 'Rank ', i_my_id, &
@@ -12634,12 +12579,9 @@
             call main_calls()
         end if
 
-!!!
-
-
 
 !----- plot the density rank_minr minimum configuation
-      if (i_my_id == rank_min) then  !TENGO QUE VER COMO MODIFICO AHORA ESTO...
+      if (i_my_id == rank_min) then
         write(*,*) 'Plotting density on rank', i_my_id
         call plot(.true.)
       end if
