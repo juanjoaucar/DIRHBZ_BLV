@@ -9,7 +9,7 @@ Correspondance to: ```aravlic@phy.hr```
 [^2]: Department of Physics, University of Surrey, United Kingdom 
 -------------------------------------------
 
-The FORTRAN77 relativistic finite-temperature Hartree-Bogoliubov (FT-RHB) solver in harmonic oscillator basis with an explicit treatment of the particle continuum. The code assumes axial symmetry, conserved parity, and time-reversal symmetry. It is suitable for the description of hot even-even nuclei, including pairing and deformation effects. The code is based on zero-temperature RHB code DIRHBZ described in Ref. [^3]. The extension to finite temperature RHB is derived in Ref. [^4], while the Bonche-Levit-Vautherin subtraction procedure is detailed in Ref. [^5]. The DIRHBZ_BLV code implements the latter two frameworks.
+The FORTRAN relativistic finite-temperature Hartree-Bogoliubov (FT-RHB) solver in harmonic oscillator basis with an explicit treatment of the particle continuum. The code assumes axial symmetry, conserved parity, and time-reversal symmetry. It is suitable for the description of hot even-even nuclei, including pairing and deformation effects. The code is based on zero-temperature RHB code DIRHBZ described in Ref. [^3]. The extension to finite temperature RHB is derived in Ref. [^4], while the Bonche-Levit-Vautherin subtraction procedure is detailed in Ref. [^5]. The DIRHBZ_BLV code implements the latter two frameworks.
 
 [^3]: T. Niksic, N. Paar, D. Vretenar, P. Ring, Computer Physics Communications 185, 6, 1808–1821 (2014).
 [^4]: A. L. Goodman, Nuclear Physics A 352, 1, 30–44 (1981).
@@ -21,11 +21,14 @@ https://www.intel.com/content/www/us/en/developer/tools/oneapi/overview.html
 
 Make sure that ```mpiifort``` is installed. To compile the calculations use the provided Makefile by typing ```make```.
 
-There are four main files containing the code:
+There are three main files containing the code:
 * ```dirhbz.f```- the main file containing the FT-RHB solver routines
 * ```dirhbz_vapor.f```- the FT-RHB solver for the vapor states
 * ```dirhb.dat```- input file
-* ```dirhb.par```- parameter file
+
+While the modules are in:
+* ```params_module.f90``` - parameters
+* ```globals_modules.f``` - variables used through the calculation
 
 The structure of the input ```dirhb.dat```file is as follows:
 * ```n0f      =   16  16```
@@ -55,12 +58,12 @@ Calculate pairing matrix element (0), or read from the ```wnn.del```file (1).
 
 -------------------------------------------
 
-The code uses MPI to split the calculation of potential energy surface on different CPUs. The number of CPUs is hardcoded to 11, however, this can be changed with minimal modification of the code. To run the code, after successful compilation, use:
+The code uses MPI to split the calculation of potential energy surface on different CPUs. By default, the number of $\beta_2$-meshpoints is 16. This can be easily changed in ```globals_modules.f```. To run the code, after successful compilation, use:
 ```mpirun -np 11 ./run```
 
 -------------------------------------------
 
-The results of the calculations are stored in the ```results.out```file. It has the following column structure, where each column corresponds to 1 out of 11 CPU cores with its own initial quadrupole deformation $\beta_2$:
+The results of the calculations are stored in the ```results.out```file. It has the following column structure, where each column corresponds to 1 out of the number of $\beta_2$-meshpoints (each with its own initial quadrupole deformation $\beta_2$):
 
 * neutron number
 * proton number
@@ -78,9 +81,10 @@ The results of the calculations are stored in the ```results.out```file. It has 
 * density of vapor states
 * neutron emission lifetime $T_n$
 
-Other details regarding the iteration-by-iteration convergence for each CPU are stored in ```dirhb_5xx.out```files, where xx ranges from 01 to 10.
+Other details regarding the iteration-by-iteration convergence for each $\beta_2$-meshpoint are stored in ```dirhb_5xx.out``` files, where xx ranges from 01 to $\beta_2$-meshpoints.
 
 The vector densities are plotted in an $(r,z)$ plane for the Nucleus+Vapor system ```dirhb.plo``` and Vapor only system ```dirhb_vapor.plo``` for quadrupole deformation $\beta_2$ which minimizes the free energy $F = E - TS$.
+The file ```dirhb_9yy.out```, where yy corresponds to the $\beta_2$-meshpoint which minimizes the free energy.
 
 -------------------------------------------
 

@@ -3,7 +3,7 @@
       implicit none
 
 !---- number of beta-meshpoints
-      integer :: n_beta = 4
+      integer :: n_beta = 16
 
       real(kind=8) :: step, beta_initial, beta_final
 
