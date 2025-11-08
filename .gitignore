@@ -1,6 +1,11 @@
 # Compiled Fortran files
 dirhbz.o
 dirhbz_vapor.o
+params_module.o
+globals_modules.o
+
+# Modules
+*mod
 
 # Executable
 run
