@@ -2,7 +2,9 @@
       module steps_module
       implicit none
 
-      integer :: n_beta !Steps for beta parameter
+!---- number of beta-meshpoints
+      integer :: n_beta = 4
+
       real(kind=8) :: step, beta_initial, beta_final
 
 !     Global Index and steps by rank

@@ -12402,9 +12402,6 @@
 !---- sets data
       call default(.false.)
 
-!     Default minimum number of beta steps
-      n_beta = 32
-
       beta_initial = -0.6
       beta_final = +0.7
 
@@ -12582,7 +12579,8 @@
 
 !----- plot the density rank_minr minimum configuation
       if (i_my_id == rank_min) then
-        write(*,*) 'Plotting density on rank', i_my_id
+        write(*,*) 'Plotting density for beta=', betac, &
+   &               ' on rank', i_my_id
         call plot(.true.)
       end if
 
@@ -13047,11 +13045,7 @@
       
       open(lin,file='dirhb.dat',status='old')
 
-      !l6 = 500+i_my_id
-      write(*,*) "VALOR DE l6:",l6
-      write(*,*) "i_my_id",i_my_id
       write(char_l6,'(i3)') l6
-
       open(l6,file='dirhb_'//char_l6//'.out',status='unknown')
 !
       call date_and_time( date, time, zone, values )
@@ -13080,6 +13074,7 @@
 !
 !---- Nucleus under consideration
       read(lin,'(a2,i4)') nucnam,nmas
+
 !---- determine stability valley N
 !      call stability
 
@@ -13115,28 +13110,6 @@
       read(lin,'(10x,i5)') icstr
 !      read(lin,'(10x,f10.4) ') betac
       
-
-!      beta_initial = -0.6
-!      beta_final = +0.7
-!      step = (beta_final-beta_initial)/i_num_procs
-!      betac = beta_initial + step*i_my_id
-!      step = (beta_final - beta_initial) / real(n_beta - 1, kind=8) !ESTA ES UNA VARIABLE GLOBAL
-
-! Compute global index corresponding to each process and step
-!        istep = 0 !LUEGO ESTO DEBERIA IR DENTRO DE UN BUCLE
-
-
-!      iglobal = istep + i_my_id * (n_beta / i_num_procs)
-
-
-!      if (iglobal < n_beta) then
-!      betac = beta_initial + step * real(iglobal, kind=8)
-!      write(*,*) "AUCAR-FLAG1",i_my_id,beta_initial,step,betac
-!      else
-!       betac = beta_final ! Skip remaining code for ranks without assigned work (por ahora no está bien)
-!      end if
-
-
 
 !--- set initial WS deformation to const. deformation
       betai = betac
