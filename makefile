@@ -3,7 +3,6 @@ FC = mpiifort -qmkl -mcmodel=large
 
 OBJ = params_module.o globals_modules.o dirhbz.o dirhbz_vapor.o
 
-
 run: $(OBJ)
 	$(FC) -o run $(OBJ)
 
@@ -22,4 +21,4 @@ dirhbz_vapor.o: dirhbz_vapor.f params_module.o globals_modules.o dirhbz.o
 
 # Target clean
 clean:
-	rm -f *.o *.mod $(EXEC)
+	rm -f *.o *.mod run
