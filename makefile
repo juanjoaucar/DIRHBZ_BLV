@@ -1,10 +1,9 @@
 
-dirhbz.o: params_module.o globals_modules.o
+FC = mpiifort -qmkl -mcmodel=large
+
+OBJ = params_module.o globals_modules.o dirhbz.o dirhbz_vapor.o
 
 
-FC = mpiifort  -qmkl -mcmodel=large 
-
-OBJ =  params_module.o globals_modules.o dirhbz.o dirhbz_vapor.o
 
 run: $(OBJ) 
 	$(FC) -o run $(OBJ)
@@ -15,3 +14,8 @@ run: $(OBJ)
 
 %.o: %.f
 	$(FC) -c $< -o $@
+
+
+# Target clean
+clean:
+	rm -f *.o *.mod $(EXEC)
