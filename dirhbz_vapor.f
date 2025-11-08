@@ -6,8 +6,8 @@ c
 c     initializes potentials (inin=1) and pairing tensor (inink=1)
 c     initialization for the vapor phase
 c----------------------------------------------------------------------c
+        use parameters
         implicit real*8 (a-h,o-z)
-        include 'dirhb.par'
         
         logical lpr
         common /initia/ inin,inink
@@ -21,8 +21,8 @@ c----------------------------------------------------------------------c
 c======================================================================c
         subroutine startpot_vapor(lpr)
 c======================================================================c
+        use parameters
         implicit real*8 (a-h,o-z)
-        include 'dirhb.par'
 c
         logical lpr
 c
@@ -133,8 +133,8 @@ c-end STARTPOT
 c======================================================================c
         subroutine startdel_vapor(lpr)
 c======================================================================c
+        use parameters
         implicit real*8 (a-h,o-z)
-        include 'dirhb.par'
 c
         logical lpr
         character tb*6  
@@ -165,9 +165,9 @@ c
 c     calculates the Dirac-Matrix in the Hartee-equation - VAPOR 
 c 
 c----------------------------------------------------------------------c
+        use parameters
         implicit real*8 (a-h,o-z)
 c
-        include 'dirhb.par'
 
         character tb*6                                            ! blokap      
 c
@@ -247,9 +247,9 @@ c
 c     Solves the VAPOR system
 c     Note that chemical potential is not constrained
 c----------------------------------------------------------------------c
+        use parameters
         implicit real*8 (a-h,o-z)
 c
-        include 'dirhb.par'
 c
         logical lpr,lprl
 c
@@ -272,7 +272,7 @@ c---- Ravlic, LAPACK diagonalization
         dimension W(2*NFX)
 
 c----------------
-        dimension hb(NHBQX),e(NHBX),ez(NHBX)
+        real(8), allocatable :: hb(:), e(:), ez(:)
 c---- Ravlic, BCS
         dimension elsp(KX), dksp(KX)
 c---- Ravlic      
@@ -308,6 +308,7 @@ c
 c
         data maxl/200/,epsl/1.d-8/,bbb/'-'/,lprl/.false./
         data fm10/1.0d-10/
+        allocate(hb(NHBQX), e(NHBX), ez(NHBX))
     
 c
         if (.true.) then
@@ -619,6 +620,8 @@ c
   113 format(i4,a,a1,3f13.8)
 c
 c      read*
+        deallocate(hb,e,ez)
+
         return
 C-end-DIRHB
         end
@@ -634,8 +637,8 @@ c     calculates the densities in oscillator basis
 c     for VAPOR solution 
 C
 c---------1---------2---------3---------4---------5---------6---------7-
+        use parameters
         implicit real*8 (a-h,o-z)
-        include 'dirhb.par'
 c
         logical lpr
 c
@@ -784,8 +787,8 @@ c     calculates the densities in r-space at Gauss-meshpoints
 c     this is for VAPOR
 C
 c---------1---------2---------3---------4---------5---------6---------7-
+        use parameters
         implicit real*8 (a-h,o-z)
-        include 'dirhb.par'
 c
         logical lpr
 c
@@ -980,9 +983,8 @@ c        fmes(x,2)       their derivatives
 c
 c     this is for VAPOR
 c======================================================================c
+        use parameters
         implicit real*8(a-h,o-z)
-c
-        include 'dirhb.par'
 c     
         logical lpr
 
@@ -1062,9 +1064,8 @@ c                    rho(i) = phi(i,4)*ggrho/grho
 c
 c       VAPOR fields
 c----------------------------------------------------------------------c
+        use parameters
         implicit real*8 (a-h,o-z)
-c
-        include 'dirhb.par'
 c
         logical lpr,lprs  
 c
@@ -1127,9 +1128,8 @@ c     calculates  field energies
 c
 c     VAPOR phase
 c----------------------------------------------------------------------c
+        use parameters
         implicit real*8 (a-h,o-z)
-c
-        include 'dirhb.par'
 c
         dimension emes(4)
 c
@@ -1212,9 +1212,8 @@ c
 c     CALCULATION OF THE POTENTIALS AT GAUSS-MESHPOINTS
 c     for VAPOR phase
 c----------------------------------------------------------------------c
+        use parameters
         implicit real*8 (a-h,o-z)
-c
-        include 'dirhb.par'
 c
         logical lpr
 c
@@ -1339,9 +1338,8 @@ c     for separable pairing: Tian,Ma,Ring, PRB 676, 44 (2009)
 c 
 c     this is for VAPOR
 c----------------------------------------------------------------------c
+        use parameters
         implicit real*8 (a-h,o-z)
-c
-        include 'dirhb.par'
 c
         logical  lpr
 c
@@ -1458,9 +1456,8 @@ c     IT    = 2 for protons
 c
 c     solves for chem. pot. as in the orig. code 
 c----------------------------------------------------------------------c
+        use parameters
         implicit real*8 (a-h,o-z)
-c
-        include 'dirhb.par'
 c
         logical lpr,lprl
 c
@@ -1471,7 +1468,7 @@ c
         character tt*8                                            ! quaosc
         character nucnam*2                                        ! nucnuc
 c
-        dimension hb(NHBQX),e(NHBX),ez(NHBX)
+        real(8), allocatable :: hb(:), e(:), ez(:)
 c
         common /blodir/ ka(NBX,4),kd(NBX,4)
         common /blokap/ nb,kb(NBX),mb(NBX),tb(NBX)
@@ -1492,6 +1489,8 @@ c---- vapor phase solutions:
 
 c
         data maxl/200/,epsl/1.d-8/,bbb/'-'/,lprl/.false./
+
+        allocate(hb(NHBQX), e(NHBX), ez(NHBX))
 c
         if (.true.) then
         write(l6,*) ' ****** BEGIN DIRHB VAPOR ORIGINAL******'
@@ -1599,6 +1598,8 @@ c
         endif
         return
 C-end-DIRHB
+        deallocate(hb,e,ez)
+c
         end
 
 c======================================================================c
@@ -1611,9 +1612,8 @@ c       calculates lifetime for emitting neutron
 c       NOTE: canonical transf. of vapor states is required
 c
 c======================================================================c
+        use parameters
         implicit real*8 (a-h,o-z)
-c
-        include 'dirhb.par'
 c
         logical lpr
 
@@ -1737,8 +1737,8 @@ c     version for RHB
 c     NOTE that this is for vapor states
 
 c----------------------------------------------------------------------c
+        use parameters
         implicit real*8 (a-h,o-z)
-        include 'dirhb.par'
 c
         logical lpr,lpr1
 c
